@@ -1,13 +1,9 @@
 package com.openclassrooms.tourguide.service;
 
-import com.openclassrooms.tourguide.helper.InternalTestHelper;
-import com.openclassrooms.tourguide.tracker.Tracker;
-import com.openclassrooms.tourguide.user.User;
-import com.openclassrooms.tourguide.user.UserReward;
-
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -22,11 +18,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.openclassrooms.tourguide.helper.InternalTestHelper;
+import com.openclassrooms.tourguide.tracker.Tracker;
+import com.openclassrooms.tourguide.user.JSONAttraction;
+import com.openclassrooms.tourguide.user.User;
+import com.openclassrooms.tourguide.user.UserReward;
+
 import gpsUtil.GpsUtil;
 import gpsUtil.location.Attraction;
 import gpsUtil.location.Location;
 import gpsUtil.location.VisitedLocation;
-
+import rewardCentral.RewardCentral;
 import tripPricer.Provider;
 import tripPricer.TripPricer;
 
@@ -95,14 +97,25 @@ public class TourGuideService {
 		return visitedLocation;
 	}
 
-	public List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
-		List<Attraction> nearbyAttractions = new ArrayList<>();
+	public List<JSONAttraction> getNearByAttractions(VisitedLocation visitedLocation) {
+		List<JSONAttraction> nearbyAttractions = new ArrayList<>();
+		RewardCentral rewardCentral = new RewardCentral();
+		
 		for (Attraction attraction : gpsUtil.getAttractions()) {
-			if (rewardsService.isWithinAttractionProximity(attraction, visitedLocation.location)) {
-				nearbyAttractions.add(attraction);
-			}
+			JSONAttraction jsonAttraction = new JSONAttraction();
+			jsonAttraction.setAttractionLocation(attraction);
+			jsonAttraction.setAttractionName(attraction.attractionName);
+			jsonAttraction.setDistance(rewardsService.getDistance(attraction, visitedLocation.location));
+			int rewardPoints = rewardCentral.getAttractionRewardPoints(attraction.attractionId, visitedLocation.userId);
+			jsonAttraction.setRewardPoints(rewardPoints);
+			
+			nearbyAttractions.add(jsonAttraction);
 		}
-
+		//methode pour trier la liste des attractions par distance (croissant).
+		nearbyAttractions.sort(Comparator.comparing(JSONAttraction::getDistance));
+		//renvoie les 5 premières dans nearbyAttractions
+		nearbyAttractions = nearbyAttractions.subList(1, 6);
+		
 		return nearbyAttractions;
 	}
 
@@ -160,5 +173,5 @@ public class TourGuideService {
 		LocalDateTime localDateTime = LocalDateTime.now().minusDays(new Random().nextInt(30));
 		return Date.from(localDateTime.toInstant(ZoneOffset.UTC));
 	}
-
+	
 }
