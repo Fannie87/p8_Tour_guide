@@ -11,6 +11,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -44,7 +47,7 @@ public class TourGuideService {
 	public TourGuideService(GpsUtil gpsUtil, RewardsService rewardsService) {
 		this.gpsUtil = gpsUtil;
 		this.rewardsService = rewardsService;
-		
+
 		Locale.setDefault(Locale.US);
 
 		if (testMode) {
@@ -61,9 +64,9 @@ public class TourGuideService {
 		return user.getUserRewards();
 	}
 
-	public VisitedLocation getUserLocation(User user) {
+	public VisitedLocation getUserLocation(User user) throws InterruptedException, ExecutionException {
 		VisitedLocation visitedLocation = (user.getVisitedLocations().size() > 0) ? user.getLastVisitedLocation()
-				: trackUserLocation(user);
+				: trackUserLocation(user).get();
 		return visitedLocation;
 	}
 
@@ -90,17 +93,23 @@ public class TourGuideService {
 		return providers;
 	}
 
-	public VisitedLocation trackUserLocation(User user) {
-		VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
-		user.addToVisitedLocations(visitedLocation);
-		rewardsService.calculateRewards(user);
-		return visitedLocation;
+	public CompletableFuture<VisitedLocation> trackUserLocation(User user) {
+		CompletableFuture<VisitedLocation> completableFuture = new CompletableFuture<VisitedLocation>();
+
+		Executors.newCachedThreadPool().submit(() -> {
+			VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
+			user.addToVisitedLocations(visitedLocation);
+			rewardsService.calculateRewards(user);
+			return visitedLocation;
+		});
+
+		return completableFuture;
 	}
 
 	public List<JSONAttraction> getNearByAttractions(VisitedLocation visitedLocation) {
 		List<JSONAttraction> nearbyAttractions = new ArrayList<>();
 		RewardCentral rewardCentral = new RewardCentral();
-		
+
 		for (Attraction attraction : gpsUtil.getAttractions()) {
 			JSONAttraction jsonAttraction = new JSONAttraction();
 			jsonAttraction.setAttractionLocation(attraction);
@@ -108,14 +117,14 @@ public class TourGuideService {
 			jsonAttraction.setDistance(rewardsService.getDistance(attraction, visitedLocation.location));
 			int rewardPoints = rewardCentral.getAttractionRewardPoints(attraction.attractionId, visitedLocation.userId);
 			jsonAttraction.setRewardPoints(rewardPoints);
-			
+
 			nearbyAttractions.add(jsonAttraction);
 		}
-		//methode pour trier la liste des attractions par distance (croissant).
+		// methode pour trier la liste des attractions par distance (croissant).
 		nearbyAttractions.sort(Comparator.comparing(JSONAttraction::getDistance));
-		//renvoie les 5 premières dans nearbyAttractions
+		// renvoie les 5 premières dans nearbyAttractions
 		nearbyAttractions = nearbyAttractions.subList(1, 6);
-		
+
 		return nearbyAttractions;
 	}
 
@@ -173,5 +182,5 @@ public class TourGuideService {
 		LocalDateTime localDateTime = LocalDateTime.now().minusDays(new Random().nextInt(30));
 		return Date.from(localDateTime.toInstant(ZoneOffset.UTC));
 	}
-	
+
 }
