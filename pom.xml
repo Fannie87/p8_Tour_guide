@@ -52,25 +52,32 @@
 			<groupId>gpsUtil</groupId>
 			<artifactId>gpsUtil</artifactId>
 			<version>1.0.0</version>
-<!--			<scope>system</scope>-->
-<!--			<systemPath>${pom.basedir}/libs/gpsUtil.jar</systemPath>-->
+			<scope>system</scope>
+			<systemPath>${pom.basedir}/libs/gpsUtil.jar</systemPath>
 		</dependency>
 
 		<dependency>
 			<groupId>tripPricer</groupId>
 			<artifactId>tripPricer</artifactId>
 			<version>1.0.0</version>
-<!--			<scope>system</scope>-->
-<!--			<systemPath>${pom.basedir}/libs/tripPricer.jar</systemPath>-->
+			<scope>system</scope>
+			<systemPath>${pom.basedir}/libs/tripPricer.jar</systemPath>
 		</dependency>
 
 		<dependency>
 			<groupId>rewardCentral</groupId>
 			<artifactId>rewardCentral</artifactId>
 			<version>1.0.0</version>
-<!--			<scope>system</scope>-->
-<!--			<systemPath>${project.basedir}/libs/rewardCentral.jar</systemPath>-->
+			<scope>system</scope>
+			<systemPath>${project.basedir}/libs/rewardCentral.jar</systemPath>
 		</dependency>
+		
+	   <dependency>
+	      <groupId>org.springdoc</groupId>
+	      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+	      <version>2.0.0</version>
+	   </dependency>
+	   
 	</dependencies>
 
 	<build>
