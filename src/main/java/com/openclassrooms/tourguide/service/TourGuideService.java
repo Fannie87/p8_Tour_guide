@@ -100,7 +100,8 @@ public class TourGuideService {
 			VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
 			user.addToVisitedLocations(visitedLocation);
 			rewardsService.calculateRewards(user);
-			return visitedLocation;
+			completableFuture.complete(visitedLocation);
+			return null;
 		});
 
 		return completableFuture;
