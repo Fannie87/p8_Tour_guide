@@ -13,6 +13,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -43,6 +44,7 @@ public class TourGuideService {
 	private final TripPricer tripPricer = new TripPricer();
 	public final Tracker tracker;
 	boolean testMode = true;
+	ExecutorService executorService = Executors.newFixedThreadPool(1000);
 
 	public TourGuideService(GpsUtil gpsUtil, RewardsService rewardsService) {
 		this.gpsUtil = gpsUtil;
@@ -94,17 +96,14 @@ public class TourGuideService {
 	}
 
 	public CompletableFuture<VisitedLocation> trackUserLocation(User user) {
-		CompletableFuture<VisitedLocation> completableFuture = new CompletableFuture<VisitedLocation>();
-
-		Executors.newCachedThreadPool().submit(() -> {
-			VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
-			user.addToVisitedLocations(visitedLocation);
-			rewardsService.calculateRewards(user);
-			completableFuture.complete(visitedLocation);
-			return null;
-		});
-
-		return completableFuture;
+		return CompletableFuture.supplyAsync(() ->
+						gpsUtil.getUserLocation(user.getUserId()), executorService)
+				.thenApply(visitedLocation -> {
+					user.addToVisitedLocations(visitedLocation);
+					rewardsService.calculateRewardsAsync(user).join();
+					return visitedLocation;
+				});
+	
 	}
 
 	public List<JSONAttraction> getNearByAttractions(VisitedLocation visitedLocation) {

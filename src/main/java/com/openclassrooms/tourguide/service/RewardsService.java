@@ -1,7 +1,10 @@
 package com.openclassrooms.tourguide.service;
 
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Stream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.springframework.stereotype.Service;
 
@@ -22,12 +25,14 @@ public class RewardsService {
     private int defaultProximityBuffer = 10;
 	private int proximityBuffer = defaultProximityBuffer;
 	private int attractionProximityRange = 200;
-	private final GpsUtil gpsUtil;
 	private final RewardCentral rewardsCentral;
-	
+	private final List<Attraction> attractions;
+	ExecutorService executorService = Executors.newFixedThreadPool(1000);
+
 	public RewardsService(GpsUtil gpsUtil, RewardCentral rewardCentral) {
-		this.gpsUtil = gpsUtil;
 		this.rewardsCentral = rewardCentral;
+		this.attractions = gpsUtil.getAttractions(); // ajouté au constructeur afin de charger la liste une seule fois
+
 	}
 	
 	public void setProximityBuffer(int proximityBuffer) {
@@ -38,21 +43,30 @@ public class RewardsService {
 		proximityBuffer = defaultProximityBuffer;
 	}
 	
-	public void calculateRewards(User user) {
-		//Copies des listes. Permet de rendre les listes fail-safe.
-		CopyOnWriteArrayList<VisitedLocation> userLocations = new CopyOnWriteArrayList<VisitedLocation>(user.getVisitedLocations());
-		CopyOnWriteArrayList<Attraction> attractions = new CopyOnWriteArrayList<Attraction>(gpsUtil.getAttractions());
- 		
-		
-		for(VisitedLocation visitedLocation : userLocations) {
-			for(Attraction attraction : attractions) {
-				if(user.getUserRewards().stream().filter(r -> r.attraction.attractionName.equals(attraction.attractionName)).count() == 0) {
-					if(nearAttraction(visitedLocation, attraction)) {
-						user.addUserReward(new UserReward(visitedLocation, attraction, getRewardPoints(attraction, user)));
+    public CompletableFuture<Void> calculateRewardsAsync(User user) {
+		List<VisitedLocation> userLocations = user.getVisitedLocations();
+		List<CompletableFuture<Void>> futures = new ArrayList<>();
+
+		//Pour chaque attraction de l'app, on parcourt toutes les positions du user
+		for (Attraction attraction : attractions) 
+			for (VisitedLocation visitedLocation : userLocations) 
+				// if true = user n'a pas encore de Reward pour cette attraction
+				if (user.getUserRewards().stream().filter(reward -> reward.attraction.attractionName.equals(attraction.attractionName)).count() == 0) 
+					if (nearAttraction(visitedLocation, attraction)) {
+
+						//Un CompletableFuture<Void> ajouté dans la liste "futures" à chaque boucle
+						futures.add(addUserRewardAsync(user, visitedLocation, attraction));
+						//Quand une nouvelle récompense est ajoutée, on passe immédiatement à l'attraction suivante
+						break;
 					}
-				}
-			}
-		}
+		//On retourne un CompletableFuture composé de tout les CompletableFuture mis dans la liste "futures" (.allOf)
+		return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+	}
+    
+	public CompletableFuture<Void> addUserRewardAsync(User user, VisitedLocation visitedLocation, Attraction attraction) {
+		return CompletableFuture.supplyAsync(() -> getRewardPoints(attraction, user), executorService).thenAccept((integer) -> {
+			user.addUserReward(new UserReward(visitedLocation, attraction, integer));
+		});
 	}
 	
 	public boolean isWithinAttractionProximity(Attraction attraction, Location location) {
@@ -80,5 +94,8 @@ public class RewardsService {
         double statuteMiles = STATUTE_MILES_PER_NAUTICAL_MILE * nauticalMiles;
         return statuteMiles;
 	}
+
+
+
 
 }
