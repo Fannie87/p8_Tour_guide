@@ -90,7 +90,7 @@ public class TestPerformance {
 		List<CompletableFuture<Void>> futuresCalculateRewards = new ArrayList<>();
 
 		for (User u : allUsers) {
-			futuresCalculateRewards.add(rewardsService.calculateRewardsAsync(u));
+			futuresCalculateRewards.add(rewardsService.calculateRewards(u));
 		}
         for (User user : allUsers) {
             assertTrue(user.getUserRewards().size() > 0);

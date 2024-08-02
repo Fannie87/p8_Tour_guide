@@ -38,6 +38,8 @@ import tripPricer.TripPricer;
 
 @Service
 public class TourGuideService {
+	
+	private static final double CONVERSION_MILES_TO_KM = 1.61;
 	private Logger logger = LoggerFactory.getLogger(TourGuideService.class);
 	private final GpsUtil gpsUtil;
 	private final RewardsService rewardsService;
@@ -100,10 +102,9 @@ public class TourGuideService {
 						gpsUtil.getUserLocation(user.getUserId()), executorService)
 				.thenApply(visitedLocation -> {
 					user.addToVisitedLocations(visitedLocation);
-					rewardsService.calculateRewardsAsync(user).join();
+					rewardsService.calculateRewards(user).join();
 					return visitedLocation;
 				});
-	
 	}
 
 	public List<JSONAttraction> getNearByAttractions(VisitedLocation visitedLocation) {
@@ -114,7 +115,8 @@ public class TourGuideService {
 			JSONAttraction jsonAttraction = new JSONAttraction();
 			jsonAttraction.setAttractionLocation(attraction);
 			jsonAttraction.setAttractionName(attraction.attractionName);
-			jsonAttraction.setDistance(rewardsService.getDistance(attraction, visitedLocation.location));
+			//Conversion en km
+			jsonAttraction.setDistance(rewardsService.getDistance(attraction, visitedLocation.location)*CONVERSION_MILES_TO_KM);
 			int rewardPoints = rewardCentral.getAttractionRewardPoints(attraction.attractionId, visitedLocation.userId);
 			jsonAttraction.setRewardPoints(rewardPoints);
 

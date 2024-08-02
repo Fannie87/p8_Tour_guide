@@ -43,7 +43,7 @@ public class RewardsService {
 		proximityBuffer = defaultProximityBuffer;
 	}
 	
-    public CompletableFuture<Void> calculateRewardsAsync(User user) {
+    public CompletableFuture<Void> calculateRewards(User user) {
 		List<VisitedLocation> userLocations = user.getVisitedLocations();
 		List<CompletableFuture<Void>> futures = new ArrayList<>();
 
@@ -55,7 +55,7 @@ public class RewardsService {
 					if (nearAttraction(visitedLocation, attraction)) {
 
 						//Un CompletableFuture<Void> ajouté dans la liste "futures" à chaque boucle
-						futures.add(addUserRewardAsync(user, visitedLocation, attraction));
+						futures.add(addUserReward(user, visitedLocation, attraction));
 						//Quand une nouvelle récompense est ajoutée, on passe immédiatement à l'attraction suivante
 						break;
 					}
@@ -63,10 +63,10 @@ public class RewardsService {
 		return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
 	}
     
-	public CompletableFuture<Void> addUserRewardAsync(User user, VisitedLocation visitedLocation, Attraction attraction) {
-		return CompletableFuture.supplyAsync(() -> getRewardPoints(attraction, user), executorService).thenAccept((integer) -> {
-			user.addUserReward(new UserReward(visitedLocation, attraction, integer));
-		});
+	public CompletableFuture<Void> addUserReward(User user, VisitedLocation visitedLocation, Attraction attraction) {
+		return CompletableFuture //
+				.supplyAsync(() -> getRewardPoints(attraction, user), executorService) // 
+				.thenAccept((integer) -> user.addUserReward(new UserReward(visitedLocation, attraction, integer)));
 	}
 	
 	public boolean isWithinAttractionProximity(Attraction attraction, Location location) {

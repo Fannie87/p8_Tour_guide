@@ -61,8 +61,8 @@ public class TestRewardsService {
 		InternalTestHelper.setInternalUserNumber(1);
 		TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService);
 
-		CompletableFuture<Void> calculateRewardsAsync = rewardsService.calculateRewardsAsync(tourGuideService.getAllUsers().get(0));
-		calculateRewardsAsync.get();
+		CompletableFuture<Void> calculateRewards = rewardsService.calculateRewards(tourGuideService.getAllUsers().get(0));
+		calculateRewards.get();
 		List<UserReward> userRewards = tourGuideService.getUserRewards(tourGuideService.getAllUsers().get(0));
 		tourGuideService.tracker.stopTracking();
 
