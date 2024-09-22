@@ -125,7 +125,7 @@ public class TourGuideService {
 		// methode pour trier la liste des attractions par distance (croissant).
 		nearbyAttractions.sort(Comparator.comparing(JSONAttraction::getDistance));
 		// renvoie les 5 premières dans nearbyAttractions
-		nearbyAttractions = nearbyAttractions.subList(0, 6);
+		nearbyAttractions = nearbyAttractions.subList(0, 5);
 
 		return nearbyAttractions;
 	}
